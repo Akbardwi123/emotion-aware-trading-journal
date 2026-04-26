@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase/client'
+import { supabaseAdmin as supabase } from '@/lib/supabase/server'
 
 // ====================================
 // API: /api/leaderboard?week=2026-04-21
@@ -44,14 +44,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Format data untuk frontend
-    const leaderboard = (scores || []).map((entry, index) => ({
-      rank: index + 1,
-      walletAddress: (entry.users as { wallet_address: string })?.wallet_address || 'Unknown',
-      score: entry.score,
-      fomoCount: entry.fomo_count,
-      revengeCount: entry.revenge_count,
-      overleverageCount: entry.overleverage_count,
-    }))
+    const leaderboard = (scores || []).map((entry, index) => {
+      // Supabase FK join: users bisa berupa object atau array tergantung relasi
+      const user = Array.isArray(entry.users) ? entry.users[0] : entry.users
+      return {
+        rank: index + 1,
+        walletAddress: (user as { wallet_address: string } | null)?.wallet_address || 'Unknown',
+        score: entry.score,
+        fomoCount: entry.fomo_count,
+        revengeCount: entry.revenge_count,
+        overleverageCount: entry.overleverage_count,
+      }
+    })
 
     return NextResponse.json({ leaderboard, week })
   } catch {

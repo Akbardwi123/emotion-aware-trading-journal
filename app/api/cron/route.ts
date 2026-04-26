@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase/client'
+import { supabaseAdmin as supabase } from '@/lib/supabase/server'
 import { getUserFills, getUserFunding } from '@/lib/api/hyperliquid'
 import { processHyperliquidFills } from '@/lib/engines/pnl'
 import { analyzeBehavior } from '@/lib/engines/behavior'
@@ -88,13 +88,31 @@ export async function GET(request: Request) {
           if (existingAlert) continue // Sudah pernah dikirim, skip
 
           // Bangun pesan berdasarkan tipe
+          // Parse data dari flag.description yang sudah berisi angka aktual
           let message = flag.description
           if (flag.type === 'FOMO') {
-            message = buildFomoAlert(flag.coin, 5)
+            // Ekstrak persentase perubahan harga dari description
+            const priceMatch = flag.description.match(/(\d+\.?\d*)%/)
+            const priceChange = priceMatch ? parseFloat(priceMatch[1]) : 5
+            message = buildFomoAlert(flag.coin, priceChange)
           } else if (flag.type === 'REVENGE') {
-            message = buildRevengeAlert(flag.coin, 50, 5, 1.5)
+            // Ekstrak data dari description: loss amount, minutes, size multiplier
+            const lossMatch = flag.description.match(/\$(\d+\.?\d*)/)
+            const minuteMatch = flag.description.match(/(\d+) menit/)
+            const sizeMatch = flag.description.match(/(\d+\.?\d*)x/)
+            const lossAmount = lossMatch ? parseFloat(lossMatch[1]) : 0
+            const minutes = minuteMatch ? parseInt(minuteMatch[1]) : 0
+            const sizeMultiplier = sizeMatch ? parseFloat(sizeMatch[1]) : 1.5
+            message = buildRevengeAlert(flag.coin, lossAmount, minutes, sizeMultiplier)
           } else if (flag.type === 'OVERLEVERAGE') {
-            message = buildOverleverageAlert(flag.coin, 20, 10000, 500)
+            // Ekstrak data dari description: leverage ratio, notional, balance
+            const notionalMatch = flag.description.match(/\$(\d+)/)
+            const ratioMatch = flag.description.match(/(\d+\.?\d*)x/)
+            const balanceMatch = flag.description.match(/\$(\d+)\)/)
+            const leverageRatio = ratioMatch ? parseFloat(ratioMatch[1]) : 10
+            const notional = notionalMatch ? parseFloat(notionalMatch[1]) : 0
+            const balance = balanceMatch ? parseFloat(balanceMatch[1]) : 0
+            message = buildOverleverageAlert(flag.coin, leverageRatio, notional, balance)
           }
 
           // Kirim ke Telegram

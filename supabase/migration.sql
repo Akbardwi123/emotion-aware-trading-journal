@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   wallet_address TEXT NOT NULL UNIQUE,
   telegram_chat_id TEXT,
+  alert_preferences JSONB DEFAULT '{"fomo":true,"revenge":true,"overleverage":true,"weekly_digest":false}',
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );

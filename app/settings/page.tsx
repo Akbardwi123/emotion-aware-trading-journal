@@ -23,6 +23,35 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [copied, setCopied] = useState(false)
+  const [preferences, setPreferences] = useState({
+    fomo: true,
+    revenge: true,
+    overleverage: true,
+    weekly_digest: false,
+  })
+  const [isLoadingPrefs, setIsLoadingPrefs] = useState(false)
+
+  // Fetch preferences on load
+  useEffect(() => {
+    async function fetchPreferences() {
+      if (!address) return
+      setIsLoadingPrefs(true)
+      try {
+        const res = await fetch(`/api/users/preferences?wallet=${address}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.preferences) {
+            setPreferences(data.preferences)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch preferences', err)
+      } finally {
+        setIsLoadingPrefs(false)
+      }
+    }
+    fetchPreferences()
+  }, [address])
 
   // Reset status setelah 3 detik
   useEffect(() => {
@@ -65,6 +94,28 @@ export default function SettingsPage() {
       navigator.clipboard.writeText(address)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handleTogglePreference = async (key: keyof typeof preferences) => {
+    if (!address) return
+
+    const newPrefs = { ...preferences, [key]: !preferences[key] }
+    setPreferences(newPrefs) // Optimistic update
+
+    try {
+      await fetch('/api/users/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_address: address,
+          preferences: newPrefs,
+        }),
+      })
+    } catch (err) {
+      console.error('Failed to save preference', err)
+      // Revert if failed
+      setPreferences(preferences)
     }
   }
 
@@ -252,31 +303,43 @@ export default function SettingsPage() {
                 <Bell className="h-5 w-5 text-amber-400" />
                 <h2 className="text-base font-semibold text-white">Alert Preferences</h2>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 relative">
+                {isLoadingPrefs && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/50 backdrop-blur-[1px] rounded-xl">
+                    <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+                  </div>
+                )}
                 {[
-                  { label: 'FOMO Detection', desc: 'Alert saat Anda entry di puncak volatilitas', color: 'bg-amber-500', defaultOn: true },
-                  { label: 'Revenge Trading', desc: 'Alert saat Anda buka posisi besar setelah loss', color: 'bg-red-500', defaultOn: true },
-                  { label: 'Overleveraging', desc: 'Alert saat leverage melebihi batas aman', color: 'bg-orange-500', defaultOn: true },
-                  { label: 'Weekly Digest', desc: 'Laporan mingguan ringkasan performa trading', color: 'bg-violet-500', defaultOn: false },
-                ].map((pref) => (
-                  <label
-                    key={pref.label}
-                    className="flex items-center justify-between rounded-xl bg-slate-800/30 px-4 py-3 cursor-pointer hover:bg-slate-800/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-2 w-2 rounded-full ${pref.color}`} />
-                      <div>
-                        <p className="text-sm font-medium text-white">{pref.label}</p>
-                        <p className="text-xs text-slate-500">{pref.desc}</p>
+                  { id: 'fomo', label: 'FOMO Detection', desc: 'Alert saat Anda entry di puncak volatilitas', color: 'bg-amber-500' },
+                  { id: 'revenge', label: 'Revenge Trading', desc: 'Alert saat Anda buka posisi besar setelah loss', color: 'bg-red-500' },
+                  { id: 'overleverage', label: 'Overleveraging', desc: 'Alert saat leverage melebihi batas aman', color: 'bg-orange-500' },
+                  { id: 'weekly_digest', label: 'Weekly Digest', desc: 'Laporan mingguan ringkasan performa trading', color: 'bg-violet-500' },
+                ].map((pref) => {
+                  const isChecked = preferences[pref.id as keyof typeof preferences]
+                  return (
+                    <label
+                      key={pref.id}
+                      className={`flex items-center justify-between rounded-xl bg-slate-800/30 px-4 py-3 cursor-pointer transition-colors ${
+                        !isLoadingPrefs ? 'hover:bg-slate-800/50' : 'opacity-70 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`h-2 w-2 rounded-full ${pref.color}`} />
+                        <div>
+                          <p className="text-sm font-medium text-white">{pref.label}</p>
+                          <p className="text-xs text-slate-500">{pref.desc}</p>
+                        </div>
                       </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked={pref.defaultOn}
-                      className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-violet-500 focus:ring-violet-500/30 focus:ring-offset-0"
-                    />
-                  </label>
-                ))}
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => !isLoadingPrefs && handleTogglePreference(pref.id as keyof typeof preferences)}
+                        disabled={isLoadingPrefs}
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-violet-500 focus:ring-violet-500/30 focus:ring-offset-0 disabled:opacity-50"
+                      />
+                    </label>
+                  )
+                })}
               </div>
             </motion.div>
           </div>
