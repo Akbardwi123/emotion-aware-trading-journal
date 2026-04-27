@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
+
 import { Navbar } from '@/components/navbar'
 import { ScoreCard } from '@/components/dashboard/score-card'
 import { PnlChart } from '@/components/dashboard/pnl-chart'
 import { TradeHistory } from '@/components/dashboard/trade-history'
+import { MultiChainPortfolio } from '@/components/dashboard/multi-chain-portfolio'
 import { useTradingData } from '@/hooks/use-trading-data'
 import { useAccount } from 'wagmi'
 import { motion } from 'framer-motion'
@@ -95,8 +98,9 @@ function DashboardSkeleton() {
 // ================================================================
 
 export default function DashboardPage() {
-  const { isConnected } = useAccount()
-  const { data, isLoading, error, refetch } = useTradingData()
+  const { isConnected, address } = useAccount()
+  const [daysFilter, setDaysFilter] = useState<string>('all')
+  const { data, isLoading, error, refetch } = useTradingData(daysFilter)
 
   // ---- State: Wallet belum connect ----
   if (!isConnected) {
@@ -144,14 +148,38 @@ export default function DashboardPage() {
                 Overview performa dan kesehatan psikologi trading Anda.
               </p>
             </div>
-            <button
-              onClick={refetch}
-              disabled={isLoading}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? 'Syncing...' : 'Refresh'}
-            </button>
+            
+            <div className="flex items-center gap-3">
+              {/* Date Filter */}
+              <div className="relative">
+                <select
+                  value={daysFilter}
+                  onChange={(e) => setDaysFilter(e.target.value)}
+                  disabled={isLoading}
+                  className="appearance-none rounded-xl border border-white/10 bg-white/5 py-2 pl-4 pr-8 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
+                >
+                  <option value="all">Semua Waktu (All-Time)</option>
+                  <option value="30">30 Hari Terakhir</option>
+                  <option value="7">7 Hari Terakhir</option>
+                  <option value="1">Hari Ini</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                  <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Refresh Button */}
+              <button
+                onClick={refetch}
+                disabled={isLoading}
+                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Syncing...' : 'Refresh'}
+              </button>
+            </div>
           </motion.div>
 
           {/* ---- Error State ---- */}
@@ -205,6 +233,11 @@ export default function DashboardPage() {
           {/* ---- Dashboard Content (Data tersedia) ---- */}
           {!isLoading && summary && behavior && (
             <>
+              {/* Multi-Chain Portfolio (Spot Assets) */}
+              <div className="mb-6">
+                <MultiChainPortfolio walletAddress={address} />
+              </div>
+
               {/* Quick Stats Row */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <StatCard
@@ -248,6 +281,7 @@ export default function DashboardPage() {
                     fomoCount={behavior.fomoCount}
                     revengeCount={behavior.revengeCount}
                     overleverageCount={behavior.overleverageCount}
+                    apeCount={behavior.apeCount}
                     profitStreak={behavior.profitableStreak}
                   />
                 </div>

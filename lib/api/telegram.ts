@@ -130,6 +130,18 @@ export function buildOverleverageAlert(
   ].join('\n')
 }
 
+export function buildApeAlert(coin: string, size: string): string {
+  return [
+    '🦍 <b>Apeing Detected!</b>',
+    '',
+    `Anda terdeteksi memegang koin meme/berisiko tinggi <b>${coin}</b> dengan jumlah fantastis (${size}).`,
+    '',
+    '💡 <i>Tip: Meme coin memiliki risiko rugpull dan likuiditas rendah yang ekstrem. Jangan alokasikan uang yang Anda tidak sanggup untuk kehilangannya!</i>',
+    '',
+    '📊 Lihat dashboard → emotrade.app/dashboard',
+  ].join('\n')
+}
+
 export function buildWeeklyDigest(
   score: number,
   totalPnl: number,

@@ -11,7 +11,7 @@ import type { ProcessedTrade } from '@/lib/engines/pnl'
 
 // ----- TYPE DEFINITIONS -----
 
-export type BehaviorType = 'FOMO' | 'REVENGE' | 'OVERLEVERAGE'
+export type BehaviorType = 'FOMO' | 'REVENGE' | 'OVERLEVERAGE' | 'APE'
 
 export interface BehaviorFlag {
   type: BehaviorType
@@ -28,6 +28,7 @@ export interface BehaviorReport {
   fomoCount: number
   revengeCount: number
   overleverageCount: number
+  apeCount: number           // Deteksi meme coin / rugpull exposure
   profitableStreak: number   // Streak profit terpanjang berturut-turut
   disciplineBonus: number    // Bonus dari kebiasaan baik
   totalPenalty: number       // Total pengurangan poin
@@ -52,6 +53,7 @@ const CONFIG = {
   PENALTY_FOMO: 5,         // -5 poin per FOMO
   PENALTY_REVENGE: 8,      // -8 poin per Revenge (paling fatal)
   PENALTY_OVERLEVERAGE: 6, // -6 poin per Overleverage
+  PENALTY_APE: 4,          // -4 poin per Meme Coin FOMO/Ape
   REWARD_PROFIT_STREAK: 3, // +3 poin per 3 profit berturut
   REWARD_DISCIPLINE: 5,    // +5 poin jika istirahat >24 jam setelah loss besar
 }
@@ -165,6 +167,8 @@ function detectOverleverage(
   if (accountBalance <= 0) return flags // Skip jika balance tidak tersedia
 
   for (const trade of trades) {
+    if (trade.marketType === 'SPOT') continue // Spot trading tidak punya leverage
+
     const notionalValue = trade.entryPrice * trade.size
     const leverageRatio = notionalValue / accountBalance
 
@@ -176,6 +180,36 @@ function detectOverleverage(
         severity:
           leverageRatio > 50 ? 'HIGH' : leverageRatio > 20 ? 'MEDIUM' : 'LOW',
         description: `💀 Overleveraging: Posisi ${trade.coin} senilai $${notionalValue.toFixed(0)} = ${leverageRatio.toFixed(1)}x dari saldo Anda ($${accountBalance.toFixed(0)}).`,
+        timestamp: trade.entryTime,
+      })
+    }
+  }
+
+  return flags
+}
+
+/**
+ * DETEKSI APE / MEME COIN EXPOSURE (Khusus SPOT)
+ * Kondisi: User membeli koin dengan suplai/size yang tidak wajar (> 1 juta) 
+ * atau membeli koin yang terindikasi sebagai meme coin.
+ */
+function detectApe(trades: ProcessedTrade[]): BehaviorFlag[] {
+  const flags: BehaviorFlag[] = []
+  
+  const knownMemeCoins = ['PEPE', 'WIF', 'BONK', 'DOGE', 'SHIB', 'FLOKI']
+
+  for (const trade of trades) {
+    if (trade.marketType !== 'SPOT') continue
+
+    const isMeme = knownMemeCoins.includes(trade.coin) || trade.size > 1000000
+
+    if (isMeme && trade.isOpen) {
+      flags.push({
+        type: 'APE',
+        tradeId: trade.id,
+        coin: trade.coin,
+        severity: trade.size > 100000000 ? 'HIGH' : 'MEDIUM',
+        description: `🦍 Apeing Detected: Anda memegang ${trade.size.toLocaleString()} ${trade.coin} di dompet Spot. Hati-hati terhadap risiko Rugpull atau likuiditas rendah!`,
         timestamp: trade.entryTime,
       })
     }
@@ -251,16 +285,19 @@ export function analyzeBehavior(
   const fomoFlags = detectFomo(trades)
   const revengeFlags = detectRevenge(trades)
   const overleverageFlags = detectOverleverage(trades, accountBalance)
+  const apeFlags = detectApe(trades)
 
   // Gabungkan semua flags
-  const allFlags = [...fomoFlags, ...revengeFlags, ...overleverageFlags]
+  const allFlags = [...fomoFlags, ...revengeFlags, ...overleverageFlags, ...apeFlags]
     .sort((a, b) => a.timestamp - b.timestamp)
 
   // Hitung penalti
-  const totalPenalty =
-    fomoFlags.length * CONFIG.PENALTY_FOMO +
-    revengeFlags.length * CONFIG.PENALTY_REVENGE +
-    overleverageFlags.length * CONFIG.PENALTY_OVERLEVERAGE
+  const fomoPenalty = fomoFlags.length * CONFIG.PENALTY_FOMO
+  const revengePenalty = revengeFlags.length * CONFIG.PENALTY_REVENGE
+  const overleveragePenalty = overleverageFlags.length * CONFIG.PENALTY_OVERLEVERAGE
+  const apePenalty = apeFlags.length * CONFIG.PENALTY_APE
+
+  const totalPenalty = fomoPenalty + revengePenalty + overleveragePenalty + apePenalty
 
   // Hitung reward
   const profitableStreak = calculateProfitStreak(trades)
@@ -278,6 +315,7 @@ export function analyzeBehavior(
     fomoCount: fomoFlags.length,
     revengeCount: revengeFlags.length,
     overleverageCount: overleverageFlags.length,
+    apeCount: apeFlags.length,
     profitableStreak,
     disciplineBonus: totalReward,
     totalPenalty,

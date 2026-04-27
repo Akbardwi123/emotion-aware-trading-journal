@@ -7,6 +7,7 @@ interface ScoreCardProps {
   fomoCount: number
   revengeCount: number
   overleverageCount: number
+  apeCount: number
   profitStreak: number
 }
 
@@ -17,7 +18,7 @@ function getScoreColor(score: number) {
   return { gradient: 'from-red-400 to-rose-600', ring: 'ring-red-500/30', text: 'text-red-400', bg: 'bg-red-500', label: 'Critical' }
 }
 
-export function ScoreCard({ score, fomoCount, revengeCount, overleverageCount, profitStreak }: ScoreCardProps) {
+export function ScoreCard({ score, fomoCount, revengeCount, overleverageCount, apeCount, profitStreak }: ScoreCardProps) {
   const colors = getScoreColor(score)
   const circumference = 2 * Math.PI * 70 // radius = 70
   const offset = circumference - (score / 100) * circumference
@@ -95,11 +96,15 @@ export function ScoreCard({ score, fomoCount, revengeCount, overleverageCount, p
         </div>
         <div className="rounded-xl bg-slate-800/50 p-3 text-center">
           <div className="text-lg font-bold text-orange-400">{overleverageCount}</div>
-          <div className="text-[11px] text-slate-500">Overleverage</div>
+          <div className="text-[11px] text-slate-500">Overleveraged</div>
         </div>
         <div className="rounded-xl bg-slate-800/50 p-3 text-center">
-          <div className="text-lg font-bold text-emerald-400">{profitStreak}</div>
-          <div className="text-[11px] text-slate-500">Best Streak</div>
+          <div className="text-lg font-bold text-purple-400">{apeCount}</div>
+          <div className="text-[11px] text-slate-500">High Meme Exp.</div>
+        </div>
+        <div className="col-span-2 rounded-xl bg-slate-800/50 p-3 flex justify-between items-center px-6">
+          <div className="text-[11px] text-slate-500">Best Profit Streak</div>
+          <div className="text-lg font-bold text-emerald-400">{profitStreak} Trades</div>
         </div>
       </div>
     </div>

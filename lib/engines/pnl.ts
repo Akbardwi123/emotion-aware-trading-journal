@@ -11,18 +11,19 @@ import type { HyperliquidFill, HyperliquidFunding } from '@/lib/api/hyperliquid'
 export interface ProcessedTrade {
   id: string              // ID unik (hash dari fill pertama)
   coin: string            // Aset yang diperdagangkan (ETH, BTC, dll)
-  side: 'LONG' | 'SHORT'
+  side: 'LONG' | 'SHORT' | 'BUY' | 'SELL'
+  marketType: 'PERP' | 'SPOT'
   entryPrice: number
   exitPrice: number | null
   size: number
   rawPnl: number          // PnL mentah (hanya selisih harga)
-  totalFee: number        // Total trading fee
-  fundingCost: number     // Total funding rate yang dibayar
+  totalFee: number        // Total trading fee (gas fee untuk spot)
+  fundingCost: number     // Total funding rate yang dibayar (0 untuk spot)
   truePnl: number         // PnL sebenarnya setelah semua biaya
   entryTime: number       // Timestamp masuk posisi
   exitTime: number | null // Timestamp keluar posisi
   isOpen: boolean         // Apakah posisi masih terbuka
-  protocol: string        // Sumber data: 'hyperliquid'
+  protocol: string        // Sumber data: 'hyperliquid' | 'solana' | 'ethereum'
 }
 
 export interface PnlSummary {
@@ -207,6 +208,7 @@ function buildProcessedTrade(
     id: entryFills[0].hash,
     coin,
     side,
+    marketType: 'PERP',
     entryPrice,
     exitPrice,
     size: totalEntrySize,
@@ -219,6 +221,21 @@ function buildProcessedTrade(
     isOpen,
     protocol: 'hyperliquid',
   }
+}
+
+// ====================================
+// SPOT SIMULATION (MVP PHASE 2)
+// ====================================
+
+/**
+ * Mensimulasikan hasil parsing dari transaksi Spot On-Chain (Solana/EVM)
+ * Ini digunakan karena menarik historical price dari DEX membutuhkan API Enterprise.
+ */
+export function processSpotSwaps(): ProcessedTrade[] {
+  // Mock data has been removed for production.
+  // In the future, this is where you would fetch and parse historical EVM/Solana swaps
+  // using an Enterprise API.
+  return []
 }
 
 /**

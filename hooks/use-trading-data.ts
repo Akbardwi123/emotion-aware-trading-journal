@@ -31,7 +31,7 @@ interface UseTradingDataReturn {
   refetch: () => void
 }
 
-export function useTradingData(): UseTradingDataReturn {
+export function useTradingData(days: string = 'all'): UseTradingDataReturn {
   const { address, isConnected } = useAccount()
 
   const [data, setData] = useState<TradingData>({
@@ -50,7 +50,7 @@ export function useTradingData(): UseTradingDataReturn {
     setError(null)
 
     try {
-      const response = await fetch(`/api/trades?wallet=${address}`)
+      const response = await fetch(`/api/trades?wallet=${address}&days=${days}`)
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -71,7 +71,7 @@ export function useTradingData(): UseTradingDataReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [address, isConnected])
+  }, [address, isConnected, days])
 
   // Fetch otomatis saat wallet connect
   useEffect(() => {

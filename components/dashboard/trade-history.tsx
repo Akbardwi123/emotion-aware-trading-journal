@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { AlertTriangle, Flame, Skull, TrendingUp, TrendingDown } from 'lucide-react'
+import { AlertTriangle, Flame, Skull, TrendingUp, TrendingDown, Ghost } from 'lucide-react'
 import type { ProcessedTrade } from '@/lib/engines/pnl'
 import type { BehaviorFlag } from '@/lib/engines/behavior'
 
@@ -15,6 +15,7 @@ function getBehaviorIcon(type: string) {
     case 'FOMO': return <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
     case 'REVENGE': return <Flame className="h-3.5 w-3.5 text-red-400" />
     case 'OVERLEVERAGE': return <Skull className="h-3.5 w-3.5 text-orange-400" />
+    case 'APE': return <Ghost className="h-3.5 w-3.5 text-purple-400" />
     default: return null
   }
 }
@@ -24,6 +25,7 @@ function getBehaviorBadgeClass(type: string) {
     case 'FOMO': return 'bg-amber-500/10 text-amber-400 ring-amber-500/20'
     case 'REVENGE': return 'bg-red-500/10 text-red-400 ring-red-500/20'
     case 'OVERLEVERAGE': return 'bg-orange-500/10 text-orange-400 ring-orange-500/20'
+    case 'APE': return 'bg-purple-500/10 text-purple-400 ring-purple-500/20'
     default: return ''
   }
 }
